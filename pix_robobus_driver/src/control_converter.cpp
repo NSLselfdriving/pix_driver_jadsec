@@ -199,7 +199,7 @@ void ControlConverter::timerCallback()
     steer_ctrl_msg.header.stamp = current_time;
     steer_ctrl_msg.steer_angle_speed = 500;
     steer_ctrl_msg.steer_angle_target =
-    actuation_command_ptr_->actuation.steer_cmd * param_.steering_factor;
+    actuation_command_ptr_->actuation.steer_cmd * 180.0 / 3.14159265359 * 12.0 - 30.0;
     steer_ctrl_msg.steer_en_ctrl = 1;
 
     

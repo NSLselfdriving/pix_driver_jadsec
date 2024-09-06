@@ -1,3 +1,11 @@
+# pix_driver (JADSec版)
+
+変更点：
+
+- door_reportを抹消
+- ステアリング角を30°オフセット
+- ステアリング角の変換ファクターを変更
+
 # Pix Chassis Interface 
 
 ## Overview

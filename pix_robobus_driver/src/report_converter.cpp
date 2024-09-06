@@ -43,7 +43,6 @@ ReportConverter::ReportConverter() : rclcpp::Node("report_converter")
   std::string steering_report_sub_topic_name = "/pix_robobus/steering_report";
   std::string gear_report_sub_topic_name = "/pix_robobus/gear_report";
   std::string vcu_report_sub_topic_name = "/pix_robobus/vcu_report";
-  std::string vehicle_door_report_sub_topic_name = "/pix_robobus/vehicle_door_report";
 
   // initialize subscribers
   throttle_report_sub_ = create_subscription<pix_robobus_driver_msgs::msg::ThrottleReport>(
@@ -63,10 +62,6 @@ ReportConverter::ReportConverter() : rclcpp::Node("report_converter")
   vcu_report_sub_ = create_subscription<pix_robobus_driver_msgs::msg::VcuReport>(
     vcu_report_sub_topic_name, 1,
     std::bind(&ReportConverter::vcuReportCallback, this, std::placeholders::_1));
-
-  vehicle_door_report_sub_ = create_subscription<pix_robobus_driver_msgs::msg::VehicleDoorReport>(
-    vehicle_door_report_sub_topic_name, 1,
-    std::bind(&ReportConverter::vehicleDoorReportCallback, this, std::placeholders::_1));
 
   // initialize publishers
   control_mode_pub_ = create_publisher<autoware_auto_vehicle_msgs::msg::ControlModeReport>(
@@ -110,11 +105,9 @@ void ReportConverter::timerCallback()
     (current_time - vcu_report_received_timestamp_).seconds() * 1000.0;
   const double gear_report_delta_time_ms = 
     (current_time - gear_report_received_timestamp_).seconds() * 1000.0;
-  const double vehicle_work_sta_fb_delta_time_ms =
-    (current_time - vehicle_door_report_received_timestamp_).seconds() * 1000.0;
 
   if (throttle_report_ptr_ == nullptr || brake_report_ptr_ == nullptr || steering_report_ptr_ == nullptr ||
-      gear_report_ptr_ == nullptr || vcu_report_ptr_ == nullptr || vehicle_door_report_ptr_ == nullptr ||
+      gear_report_ptr_ == nullptr || vcu_report_ptr_ == nullptr ||
       steer_sta_fb_delta_time_ms>param_.report_msg_timeout_ms || brake_sta_fb_delta_time_ms>param_.report_msg_timeout_ms || 
       drive_sta_fb_delta_time_ms>param_.report_msg_timeout_ms || vehicle_sta_fb_delta_time_ms>param_.report_msg_timeout_ms ||
       gear_report_delta_time_ms>param_.report_msg_timeout_ms)
@@ -124,7 +117,7 @@ void ReportConverter::timerCallback()
     return;
   }
 
-  if(vcu_report_ptr_ == nullptr || vehicle_work_sta_fb_delta_time_ms>param_.report_msg_timeout_ms)
+  if(vcu_report_ptr_ == nullptr)
   {
     RCLCPP_WARN_THROTTLE(
       get_logger(), *this->get_clock(), std::chrono::milliseconds(5000).count(), "vehicle work sta fb not received or timeout");
@@ -162,7 +155,7 @@ void ReportConverter::timerCallback()
 
   // make steering angle
   steer_report_msg_.stamp = current_time;
-  steer_report_msg_.steering_tire_angle = steering_report_ptr_->steer_angle_actual * param_.steering_factor;
+  steer_report_msg_.steering_tire_angle = (steering_report_ptr_->steer_angle_actual + 30.0) / 12.0 * 3.14159265359 / 180.0;
   steering_status_pub_->publish(steer_report_msg_);
 
   // make control mode
@@ -252,12 +245,6 @@ void ReportConverter::vcuReportCallback(const pix_robobus_driver_msgs::msg::VcuR
 {
   vcu_report_received_timestamp_ = this->now();
   vcu_report_ptr_ = msg;
-}
-
-void ReportConverter::vehicleDoorReportCallback(const pix_robobus_driver_msgs::msg::VehicleDoorReport::ConstSharedPtr &msg)
-{
-  vehicle_door_report_received_timestamp_ = this->now();
-  vehicle_door_report_ptr_ = msg;
 }
 
 } // namespace report_converter
